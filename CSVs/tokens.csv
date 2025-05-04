@@ -1,0 +1,10 @@
+Token name,Ticker,Network,address,EVM
+Ethereum,ETH,Ethereum,0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,True
+Ethereum,ETH,Arbitrum,0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,True
+Ethereum,ETH,Linea,0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,True
+Tether,USDT,Ethereum,0xdac17f958d2ee523a2206206994597c13d831ec7,True
+Tether,USDT,Arbitrum,0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9,True
+Tether,USDT,Avalanche,0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7,True
+USD Coin,USDC,Ethereum,0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48,True
+USD Coin,USDC,Arbitrum,0xaf88d065e77c8cC2239327C5EDb3A432268e5831,True
+USD Coin,USDC,Base,0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913,True

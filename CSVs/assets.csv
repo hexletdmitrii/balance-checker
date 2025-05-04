@@ -1,0 +1,4 @@
+name,ticker,api,type,quantity
+Vanguard S&P 500,VOO,YahooFi,ETF,100
+iShares Hang Seng TECH,3067.HK,YahooFi,ETF,100
+Apple Inc,AAPL,YahooFi,Securites,100
