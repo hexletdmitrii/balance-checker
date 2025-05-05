@@ -1,9 +1,6 @@
 import sqlite3
-import pandas as pd
-import os
-from assets import Asset
+from utils.assets import Asset
 from datetime import datetime
-from cripto import Crypto
 
 
 class DB:
@@ -14,13 +11,14 @@ class DB:
 
     def _executer(self, sql, params=()):
         """
-        Выполняет SQL-запрос с параметрами.
+        Выполняет SQL-запрос c параметрами.
         """
         try:
             curr = self.conn.cursor()
             curr.execute(sql, params)
             self.conn.commit()
-            if sql.strip().upper().startswith("SELECT") or "RETURNING" in sql.upper():
+            if sql.strip().upper().startswith("SELECT") or \
+                    "RETURNING" in sql.upper():
                 result = curr.fetchall()
                 return result
             elif sql.strip().upper().startswith("INSERT"):
@@ -72,77 +70,51 @@ class DB:
         print(f"База данных '{self.db_name}' успешно создана.")
         return True
 
-    def add_assets_from_csv(self, csv_path):
-        if not os.path.exists(csv_path):
-            print(f"Файл '{csv_path}' не найден.")
-            return False
-
-        try:
-            data = pd.read_csv(csv_path)
-            required_columns = {"name", "ticker", "api", "type"}
-            if not required_columns.issubset(data.columns):
-                print(f"Ошибка: В файле отсутствуют обязательные столбцы: {required_columns - set(data.columns)}")
-                return False
-            sql = '''
+    def add_assets(self, name, ticker, api, _type):
+        sql = '''
                 INSERT INTO assets (name, ticker, api, type)
                 VALUES (?, ?, ?, ?)
             '''
-            sql_transactions = '''
-                INSERT INTO transactions (asset_id, amount, date) VALUES (?, ?, ?)
+        asset = Asset(name=name, ticker=ticker, api=api, type=_type)
+        _id = self._executer(sql, (asset.params))
+        return _id
+
+    def add_transactions(self, _id, quantity):
+        sql_transactions = '''
+                INSERT INTO transactions (asset_id, amount, date)
+                VALUES (?, ?, ?)
             '''
-            for _, row in data.iterrows():
+        return self._executer(sql_transactions, (_id, quantity,
+                                                 datetime.now()))
 
-                asset = Asset(name=row["name"], ticker=row["ticker"], api=row["api"], type=row["type"])
-                id = self._executer(sql, (asset.params))
-                if not id:
-                    id = self.get_id_asserts(ticker=row["ticker"])
-                self._executer(sql_transactions, (id, row["quantity"], datetime.now()))
-            print(f"Данные из файла '{csv_path}' успешно добавлены в таблицу 'assets'.")
-            return True
+    def add_price_history(self, _id, price):
+        sql = '''
+            INSERT INTO price_history (asset_id, date, price)
+                VALUES (?, ?, ?)
+        '''
+        return self._executer(sql, (id, datetime.now(), price))
 
-        except Exception as e:
-            print(f"Произошла ошибка при добавлении активов из CSV: {e}")
-            return False
-
-    def add_crypto_asserts(self):
-        sql = '''SELECT assets.id as id, assets.name as name, assets.ticker as ticker,
+    def get_crypto_assets(self):
+        sql = '''SELECT assets.id as id, assets.name as name,
+                        assets.ticker as ticker,
                     SUM(transactions.amount) as amount
-                 FROM assets INNER JOIN transactions ON assets.id = transactions.asset_id
+                 FROM assets INNER JOIN transactions
+                    ON assets.id = transactions.asset_id
                  WHERE assets.type = 'Crypto'
                  GROUP BY
                     assets.id, assets.name
                 ORDER BY
                     assets.id, assets.name;
         '''
-        sql_asserts = '''
-                INSERT INTO assets (name, ticker, api, type)
-                VALUES (?, ?, ?, ?)
-        '''
-        sql_transactions = '''
-            INSERT INTO transactions (asset_id, amount, date) VALUES (?, ?, ?)
-        '''
-        data = self._executer(sql)
-        c = Crypto()
-        tokens_amount = c.get_balance()
-        print(data)
-        for item in data:
-            if item[2] in tokens_amount and item[3] != tokens_amount.get(item[2])['quantity']:
-                trans_amount = tokens_amount.get(item[2])['quantity'] - item[3]
-                self._executer(sql_transactions,
-                               (item[0], trans_amount, datetime.now()))
-                tokens_amount.pop(item[2])
-                print(f"значение крипто изменено!{trans_amount}")
-        for token in tokens_amount:
-            id = self._executer(sql_asserts, (
-                tokens_amount[token]['name'],
-                token, "Binance", "Crypto"
-            ))
-            if id:
-                self._executer(sql_transactions, (
-                    id, tokens_amount[token]['quantity'], datetime.now()
-                ))
+        return self._executer(sql)
 
-    def get_id_asserts(self, ticker):
+    def get_all_assets(self):
+        sql = '''
+            SELECT * FROM assets;
+        '''
+        return self._executer(sql)
+
+    def get_asset_id(self, ticker):
         sql = '''
             SELECT id FROM assets WHERE ticker = ?
         '''
@@ -150,32 +122,14 @@ class DB:
         if result:
             return result[0][0]
 
-    def get_assets(self):
-        sql = '''
-            SELECT * FROM assets;
-        '''
-        data = self._executer(sql)
-        return data
-
-    def add_price_history(self):
-        assets = self.get_assets()
-        sql = '''
-            INSERT INTO price_history (asset_id, date, price)
-                VALUES (?, ?, ?)
-        '''
-        for asset in assets:
-            id = asset[0]
-            a = Asset(*(asset[1:]))
-            price = a.get_price()
-            self._executer(sql, (id, datetime.now(), price))
-
-    def make_portfolio(self):
+    def get_portfolio_data(self):
         sql = '''
             SELECT
                 assets.name AS asset_name,
                 SUM(transactions.amount) AS total_amount,
                 latest_prices.price AS asset_price,
-                (SUM(transactions.amount) * latest_prices.price) AS total_value,
+                (SUM(transactions.amount) * latest_prices.price)
+                    AS total_value,
                 latest_prices.date AS price_date
             FROM
                 transactions
@@ -196,23 +150,7 @@ class DB:
                         )
                 ) AS latest_prices ON assets.id = latest_prices.asset_id
             GROUP BY
-                assets.type, assets.name, latest_prices.price, latest_prices.date;
+                assets.type, assets.name, latest_prices.price,
+                latest_prices.date;
         '''
-        result = self._executer(sql)
-        headers = ['asset_name', 'total_amount',
-                   'asset_price', 'total_value', 'price_date']
-        df = pd.DataFrame(result, columns=headers)
-        df.to_excel("portfolio.xlsx", index=False)
-        print(f"Результат записан в файл portfolio.xlsx")
-
-
-
-if __name__ == "__main__":
-    db = DB(db_name="portfolio.db")
-    db.create_database()
-    csv_file_path = "./CSVs/assets.csv"  # Укажите путь к вашему CSV
-    db.add_assets_from_csv(csv_file_path)
-    db.add_crypto_asserts()
-    db.add_price_history()
-    
-    db.make_portfolio()
+        return self._executer(sql)

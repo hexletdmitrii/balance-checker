@@ -1,4 +1,5 @@
 name,ticker,api,type,quantity
-Vanguard S&P 500,VOO,YahooFi,ETF,100
-iShares Hang Seng TECH,3067.HK,YahooFi,ETF,100
-Apple Inc,AAPL,YahooFi,Securites,100
+Cameco Corporation,CCJ,YahooFi,Security,1000
+Vanguard S&P 500,VOO,YahooFi,Security,162
+New Hope Service Holdings Limited,3658.HK,YahooFi,Security,15000
+SINOPEC,600028.SS,YahooFi,Security,18000
